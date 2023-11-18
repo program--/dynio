@@ -55,9 +55,6 @@ typedef struct dyn_driver {
     //! Name of this driver
     const char* name;
 
-    //! User-internals for this driver
-    void* internals;
-
     //! driver::option - Get/Set an option for this driver.
     //!
     //! @param[in] self This instance of %driver.
@@ -80,19 +77,24 @@ typedef struct dyn_driver {
     //! @param[out] output Bytes buffer to write to.
     //! @param[out] output_size Pointer to write size of buffer to.
     void (*write)(struct dyn_driver* self, void* input, byte_t* output, size_t* output_size);
+
+    //! User-internals for this driver
+    void* internals;
 } dyn_driver;
 
 //! Driver registration alias
 typedef void (*dyn_driver_registration)(dyn_driver* drv);
 
 //! Driver registration function
-extern dyn_driver_registration register_driver;
+void register_driver(dyn_driver*);
+// extern dyn_driver_registration register_driver;
 
 //! Driver deregistration alias
 typedef void (*dyn_driver_deregistration)(dyn_driver* drv);
 
 //! Driver deregistration function
-extern dyn_driver_deregistration deregister_driver;
+void deregister_driver(dyn_driver*);
+// extern dyn_driver_deregistration deregister_driver;
 
 #ifdef __cplusplus
 }

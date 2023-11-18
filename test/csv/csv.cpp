@@ -138,11 +138,11 @@ void register_csv(dyn_driver* drv)
 
     std::cout << "Allocating driver\n";
     drv = new dyn_driver{
-        .name = "csv",
-        .internals = opt,
-        .option = &option_csv,
-        .read   = &read_csv,
-        .write  = &write_csv,
+        .name      = "csv",
+        .option    = option_csv,
+        .read      = read_csv,
+        .write     = write_csv,
+        .internals = opt
     };
 }
 
@@ -163,7 +163,12 @@ void deregister_csv(dyn_driver* drv)
 }
 
 // Exports, !!REQUIRED!!
-extern "C" {
-dyn_driver_registration register_driver = &example::register_csv;
-dyn_driver_deregistration deregister_driver = &example::deregister_csv;
+extern "C" void register_driver(dyn_driver* drv)
+{
+    example::register_csv(drv);
+}
+
+extern "C" void deregister_driver(dyn_driver* drv)
+{
+    example::deregister_csv(drv);
 }
