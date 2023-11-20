@@ -22,30 +22,41 @@ template<typename Tp = dynamic>
 driver<Tp> load_driver(const std::string& path)
 {
     if (!std::ifstream(path).good())
-        throw std::runtime_error("failed to load library `" + path + "` (error: file not accessible/found)");
+        throw std::runtime_error(
+          "failed to load library `" + path +
+          "` (error: file not accessible/found)"
+        );
 
     char* err;
     std::cout << "Loading library\n";
     void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if ((err = dlerror()) != nullptr || handle == nullptr)
-        throw std::runtime_error("failed to load library `" + path + "` (error: " + err + ")");
+        throw std::runtime_error(
+          "failed to load library `" + path + "` (error: " + err + ")"
+        );
 
     std::cout << "Loading register\n";
-    auto drv_register_fn = (dyn_driver_registration)dlsym(handle, "register_driver");
+    auto drv_register_fn =
+      (dyn_driver_registration)dlsym(handle, "register_driver");
     if ((err = dlerror()) != nullptr || drv_register_fn == nullptr)
-        throw std::runtime_error("failed to load registration function from `" + path + "` (error: " + err + ")");
+        throw std::runtime_error(
+          "failed to load registration function from `" + path +
+          "` (error: " + err + ")"
+        );
 
     std::cout << "Loading deregister\n";
-    auto drv_deregister_fn = (dyn_driver_deregistration) dlsym(handle, "deregister_driver");
+    auto drv_deregister_fn =
+      (dyn_driver_deregistration)dlsym(handle, "deregister_driver");
     if ((err = dlerror()) != nullptr || drv_deregister_fn == nullptr)
-        throw std::runtime_error("failed to load deregistration function from `" + path + "` (error: " + err + ")");
+        throw std::runtime_error(
+          "failed to load deregistration function from `" + path +
+          "` (error: " + err + ")"
+        );
 
     std::cout << "Loaded\n";
-    return {
-        drv_register_fn,
-        drv_deregister_fn,
-        std::shared_ptr<void>(handle, dlclose)
-    };
+    return { drv_register_fn,
+             drv_deregister_fn,
+             std::shared_ptr<void>(handle, dlclose) };
 }
 
 } // namespace dynio
