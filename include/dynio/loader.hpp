@@ -7,53 +7,67 @@
 // file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <system_error>
 #ifndef DYNIO_LOADER_HPP
 #define DYNIO_LOADER_HPP
 
 #include "driver.hpp"
 
 #include <dlfcn.h>
-#include <fstream>
 
 namespace dynio {
+
+struct dynio_load_error : public std::runtime_error
+{
+    dynio_load_error(const std::string& path)
+      : std::runtime_error("failed to load library \"" + path + "\""){};
+
+    dynio_load_error(const std::string& path, const std::string& errmsg)
+      : std::runtime_error(
+          "failed to load library \"" + path + "\" (error: " + errmsg + ")"
+        ){};
+};
+
+struct dynio_symbol_error : public std::runtime_error
+{
+    dynio_symbol_error(const std::string& symbol, const std::string& path)
+      : std::runtime_error(
+          "failed to load symbol `" + symbol + "` from \"" + path + "\""
+        ){};
+
+    dynio_symbol_error(
+      const std::string& symbol,
+      const std::string& path,
+      const std::string& errmsg
+    )
+      : std::runtime_error(
+          "failed to load symbol `" + symbol + "` from \"" + path +
+          "\" (error: " + errmsg + ")"
+        ){};
+};
 
 template<typename Tp = dynamic>
 driver<Tp> load_driver(const std::string& path)
 {
-    if (!std::ifstream(path).good())
-        throw std::runtime_error(
-          "failed to load library `" + path +
-          "` (error: file not accessible/found)"
-        );
-
     char* err;
-    std::cout << "Loading library\n";
+
     void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if ((err = dlerror()) != nullptr || handle == nullptr)
-        throw std::runtime_error(
-          "failed to load library `" + path + "` (error: " + err + ")"
-        );
+        throw dynio_load_error(path, err == nullptr ? "unknown error" : err);
 
-    std::cout << "Loading register\n";
     auto drv_register_fn =
       (dyn_driver_registration)dlsym(handle, "register_driver");
     if ((err = dlerror()) != nullptr || drv_register_fn == nullptr)
-        throw std::runtime_error(
-          "failed to load registration function from `" + path +
-          "` (error: " + err + ")"
+        throw dynio_symbol_error(
+          "register_driver", path, err == nullptr ? "unknown error" : err
         );
 
-    std::cout << "Loading deregister\n";
     auto drv_deregister_fn =
       (dyn_driver_deregistration)dlsym(handle, "deregister_driver");
     if ((err = dlerror()) != nullptr || drv_deregister_fn == nullptr)
-        throw std::runtime_error(
-          "failed to load deregistration function from `" + path +
-          "` (error: " + err + ")"
+        throw dynio_symbol_error(
+          "deregister_driver", path, err == nullptr ? "unknown error" : err
         );
 
-    std::cout << "Loaded\n";
     return { drv_register_fn,
              drv_deregister_fn,
              std::shared_ptr<void>(handle, dlclose) };
