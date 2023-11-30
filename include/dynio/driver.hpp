@@ -12,7 +12,6 @@
 
 #define DRIVER_EXPORT __attribute__((visibility("default")))
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
