@@ -1,6 +1,5 @@
 #include "csv.hpp"
 
-#include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <cstring>
@@ -139,23 +138,19 @@ dyn_driver_option* option_csv(struct dyn_driver* self, const char* name)
 // Exports, !!REQUIRED!!
 extern "C" void register_driver(dyn_driver** drv)
 {
-    std::cout << "Allocating option\n";
     auto opt = new dyn_driver_option{ dyn_driver_option_t::DRV_OPT_CHAR,
                                       "delimiter",
                                       (void*)',' };
 
-    std::cout << "Allocating driver\n";
-    *drv = new dyn_driver{ .name      = "csv",
-                           .option    = example::option_csv,
-                           .read      = example::read_csv,
-                           .write     = example::write_csv,
-                           .internals = opt };
+    *drv     = new dyn_driver{ .name      = "csv",
+                               .option    = example::option_csv,
+                               .read      = example::read_csv,
+                               .write     = example::write_csv,
+                               .internals = opt };
 }
 
 extern "C" void deregister_driver(dyn_driver** drv)
 {
-    std::cout << "Deregistering\n";
-
     if (drv != nullptr) {
         if ((*drv)->internals != nullptr) {
             delete static_cast<dyn_driver_option*>((*drv)->internals);

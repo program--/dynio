@@ -18,12 +18,12 @@ int main(int argc, const char* argv[])
     std::cout << "Loading CSV driver\n";
     dynio::driver<example::csv> drv = dynio::load_driver<example::csv>(argv[1]);
 
-    // TODO:
-    // std::cout << "Setting delimiter option\n";
-    // assert(drv.option("delimiter") != nullptr);
-    // drv.option("delimiter")->value = (void*)':';
+    std::cout << "Setting delimiter option to ':'\n";
+    assert(drv.option("delimiter") != nullptr);
+    drv.option("delimiter")->value = (void*)':';
 
-    std::string         example_csv_file = "COL1,COL2,COL3\n1,2,a\n3,4,b";
+    // Begin test
+    std::string         example_csv_file = "COL1:COL2:COL3\n1:2:a\n3:4:b";
     std::vector<byte_t> bytes{ example_csv_file.begin(),
                                example_csv_file.end() };
 
