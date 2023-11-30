@@ -88,10 +88,10 @@ void read_csv(
   struct dyn_driver* self,
   byte_t*            input,
   size_t             input_size,
-  void*              output
+  void**             output
 )
 {
-    auto csv_      = static_cast<csv*>(output);
+    auto csv_      = new csv{};
     char delim     = ',';
     auto delim_opt = self->option(self, "delimiter");
     if (delim_opt != nullptr) {
@@ -100,13 +100,13 @@ void read_csv(
 
     std::span<byte_t> input_span{ input, input_size };
     csv_->read(input_span, delim);
-    output = csv_;
+    *output = csv_;
 }
 
 void write_csv(
   struct dyn_driver* self,
   void*              input,
-  byte_t*            output,
+  byte_t**           output,
   size_t*            output_size
 )
 {

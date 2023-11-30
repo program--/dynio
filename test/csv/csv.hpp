@@ -16,13 +16,13 @@ struct csv
       struct dyn_driver* self,
       byte_t*            input,
       size_t             input_size,
-      void*              output
+      void**             output
     );
 
     friend void write_csv(
       struct dyn_driver* self,
       void*              input,
-      byte_t*            output,
+      byte_t**           output,
       size_t*            output_size
     );
 

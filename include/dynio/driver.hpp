@@ -10,11 +10,11 @@
 #ifndef DYNIO_DRIVER_HPP
 #define DYNIO_DRIVER_HPP
 
-#define DRIVER_EXPORT __attribute__((visibility("default")))
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <dlfcn.h>
 
 #include "driver.h"
 
@@ -29,23 +29,6 @@ struct driver;
 template<>
 struct driver<dynamic>
 {
-    struct deleter
-    {
-        deleter(dyn_driver_deregistration dtor)
-          : dtor_(dtor){};
-
-        deleter() = default;
-
-        void operator()(dyn_driver* d)
-        {
-            if (dtor_ && d)
-                dtor_(&d);
-        }
-
-      private:
-        dyn_driver_deregistration dtor_ = nullptr;
-    };
-
     using type                       = dynamic;
     using size_type                  = std::size_t;
     using pointer                    = std::shared_ptr<dyn_driver>;
@@ -107,7 +90,12 @@ struct driver<dynamic>
     template<typename Tp>
     Tp read(std::vector<byte_t>& input)
     {
-        Tp output;
+        return *static_cast<Tp*>(read(input));
+    }
+
+    void* read(std::vector<byte_t>& input)
+    {
+        void* output = nullptr;
         instance_->read(instance_.get(), input.data(), input.size(), &output);
         return output;
     }
@@ -115,13 +103,35 @@ struct driver<dynamic>
     template<typename Tp>
     std::vector<byte_t> write(Tp& input)
     {
+        return write(&input);
+    }
+
+    std::vector<byte_t> write(void* input)
+    {
         byte_t*   output = nullptr;
         size_type size;
-        instance_->write(instance_.get(), &input, output, &size);
+        instance_->write(instance_.get(), input, &output, &size);
         return { output, output + size };
     }
 
   private:
+    struct deleter
+    {
+        deleter(dyn_driver_deregistration dtor)
+          : dtor_(dtor){};
+
+        deleter() = default;
+
+        void operator()(dyn_driver* d)
+        {
+            if (dtor_ && d)
+                dtor_(&d);
+        }
+
+      private:
+        dyn_driver_deregistration dtor_ = nullptr;
+    };
+
     pointer               instance_;
     std::shared_ptr<void> handle_;
 };
@@ -157,6 +167,63 @@ struct driver : private driver<dynamic>
         return base_type::write<Tp>(input);
     }
 };
+
+struct dynio_load_error : public std::runtime_error
+{
+    dynio_load_error(const std::string& path)
+      : std::runtime_error("failed to load library \"" + path + "\""){};
+
+    dynio_load_error(const std::string& path, const std::string& errmsg)
+      : std::runtime_error(
+          "failed to load library \"" + path + "\" (error: " + errmsg + ")"
+        ){};
+};
+
+struct dynio_symbol_error : public std::runtime_error
+{
+    dynio_symbol_error(const std::string& symbol, const std::string& path)
+      : std::runtime_error(
+          "failed to load symbol `" + symbol + "` from \"" + path + "\""
+        ){};
+
+    dynio_symbol_error(
+      const std::string& symbol,
+      const std::string& path,
+      const std::string& errmsg
+    )
+      : std::runtime_error(
+          "failed to load symbol `" + symbol + "` from \"" + path +
+          "\" (error: " + errmsg + ")"
+        ){};
+};
+
+template<typename Tp = dynamic>
+driver<Tp> load_driver(const std::string& path)
+{
+    char* err;
+
+    void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+    if ((err = dlerror()) != nullptr || handle == nullptr)
+        throw dynio_load_error(path, err == nullptr ? "unknown error" : err);
+
+    auto drv_register_fn =
+      (dyn_driver_registration)dlsym(handle, "register_driver");
+    if ((err = dlerror()) != nullptr || drv_register_fn == nullptr)
+        throw dynio_symbol_error(
+          "register_driver", path, err == nullptr ? "unknown error" : err
+        );
+
+    auto drv_deregister_fn =
+      (dyn_driver_deregistration)dlsym(handle, "deregister_driver");
+    if ((err = dlerror()) != nullptr || drv_deregister_fn == nullptr)
+        throw dynio_symbol_error(
+          "deregister_driver", path, err == nullptr ? "unknown error" : err
+        );
+
+    return { drv_register_fn,
+             drv_deregister_fn,
+             std::shared_ptr<void>(handle, dlclose) };
+}
 
 } // namespace dynio
 
